@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Italiana de Brancas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: tabuleiro à esquerda, painel de estudo à direita; empilha no celular */
+:root{
+  --bg:#F3F5F7; --panel:#FFFFFF; --fg:#18232B; --muted:#5A6873; --line:#D5DCE2;
+  --sq-l:#DCE4EA; --sq-d:#7B93A3; --hl:#E9C46A; --accent:#1F5F7A; --accent-bg:#E1EEF3;
+  --warn-bg:#FBEFD9; --warn-fg:#7A4B07; --ok:#2E7D4F; --ok-bg:#DFF1E6; --bad:#C2413B; --bad-bg:#F8E1DF; --pw:#FFFFFF; --pb:#141B20;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11181D; --panel:#18222A; --fg:#E6ECF0; --muted:#94A3AE; --line:#2A3943;
+  --sq-l:#9DB0BD; --sq-d:#4E6676; --hl:#D9AE45; --accent:#7CC3DD; --accent-bg:#1C3440;
+  --warn-bg:#3A2C12; --warn-fg:#F3CF8C; --ok:#6CCB93; --ok-bg:#183A27; --bad:#F08A84; --bad-bg:#43201E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11181D; --panel:#18222A; --fg:#E6ECF0; --muted:#94A3AE; --line:#2A3943;
+  --sq-l:#9DB0BD; --sq-d:#4E6676; --hl:#D9AE45; --accent:#7CC3DD; --accent-bg:#1C3440;
+  --warn-bg:#3A2C12; --warn-fg:#F3CF8C; --ok:#6CCB93; --ok-bg:#183A27; --bad:#F08A84; --bad-bg:#43201E; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.55}
+.wrap{max-width:1040px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header h1{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,5vw,34px);margin:0;text-wrap:balance;letter-spacing:-.01em}
+header p{margin:4px 0 0;color:var(--muted)}
+.main{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;margin-top:18px}
+@media(min-width:820px){.main{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}}
+.boardbox{min-width:0}
+.board{display:grid;grid-template-columns:repeat(8,1fr);aspect-ratio:1;max-width:100%;border-radius:6px;overflow:hidden;border:1px solid var(--line);user-select:none}
+.sq{position:relative;display:flex;align-items:center;justify-content:center;font-size:clamp(28px,9.5vw,52px);line-height:1}
+.l{background:var(--sq-l)}.d{background:var(--sq-d)}
+.sq.hl::after{content:"";position:absolute;inset:0;background:var(--hl);opacity:.55}
+.pc{position:relative;z-index:1;transition:transform .15s}
+.pw{color:var(--pw);-webkit-text-stroke:1.4px #141B20;paint-order:stroke fill}
+.pb{color:var(--pb)}
+.co{position:absolute;font:500 10px var(--f-mono);z-index:1;opacity:.75}
+.co.r{top:2px;left:3px}.co.f{bottom:1px;right:3px}
+.l .co{color:#4E6676}.d .co{color:#E6ECF0}
+.ctrl{display:flex;gap:8px;margin-top:12px;align-items:center}
+.ctrl button{flex:1;height:44px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:500 16px var(--f-body);cursor:pointer}
+.ctrl button:hover{border-color:var(--accent)}
+.ctrl button:focus-visible,.vbtn:focus-visible,.mv:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ctrl button.play{background:var(--accent);color:var(--panel);border-color:var(--accent)}
+.note{margin-top:12px;min-height:52px;padding:10px 12px;border-radius:8px;background:var(--accent-bg);color:var(--fg);font-size:14px}
+.note b{font-family:var(--f-mono);font-weight:500;color:var(--accent)}
+.panel{min-width:0;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.eyebrow{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.vname{font-family:var(--f-display);font-weight:500;font-size:20px;margin:0}
+.moves{display:flex;flex-wrap:wrap;gap:2px 4px;margin-top:10px;font-family:var(--f-mono);font-size:14px}
+.num{color:var(--muted);padding:3px 0 3px 4px}
+.mv{border:0;background:none;color:var(--fg);font:inherit;padding:3px 6px;border-radius:5px;cursor:pointer}
+.mv.cur{background:var(--accent);color:var(--panel)}
+.mv.tr{color:var(--muted)}
+.plan{margin:12px 0 0;font-size:14.5px}
+.warn{display:inline-block;margin-top:10px;font-size:13px;background:var(--warn-bg);color:var(--warn-fg);padding:4px 10px;border-radius:6px}
+.group{margin-top:10px}
+.group:first-of-type{margin-top:0}
+.gtitle{font:500 13px var(--f-mono);color:var(--accent);margin:0 0 6px}
+.vlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.vbtn{text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:8px 10px;cursor:pointer;font:400 13.5px/1.3 var(--f-body)}
+.vbtn small{display:block;font-family:var(--f-mono);font-size:11.5px;color:var(--muted);margin-bottom:2px}
+.vbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-bg)}
+.modes{display:inline-flex;margin-top:14px;border:1px solid var(--line);border-radius:9px;padding:3px;background:var(--panel);gap:3px}
+.modes button{border:0;background:none;color:var(--muted);font:500 14px var(--f-body);padding:8px 16px;border-radius:6px;cursor:pointer;min-height:38px}
+.modes button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+.modes button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.training .sq{cursor:pointer}
+.sq.sel::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 4px var(--accent);background:none;opacity:1}
+.sq.hint::before{content:"";position:absolute;inset:18%;border-radius:50%;background:var(--ok);opacity:.55;z-index:0}
+.sq.bad::after{content:"";position:absolute;inset:0;background:var(--bad);opacity:.55}
+.score{display:flex;gap:14px;margin-top:12px;font:500 13px var(--f-mono);color:var(--muted)}
+.score b{font-weight:500}.score .s-ok{color:var(--ok)}.score .s-err{color:var(--bad)}
+.note.good{background:var(--ok-bg)}.note.wrong{background:var(--bad-bg)}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.board.shake{animation:shake .25s}
+@media (prefers-reduced-motion:reduce){.pc{transition:none}.board.shake{animation:none}}
+body{margin:0}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Abertura Italiana · repertório de brancas</h1>
+    <p>Escolha a resposta das pretas e avance lance a lance.</p>
+    <div class="modes" role="group" aria-label="Modo">
+      <button id="m-study" aria-pressed="true">Estudar</button>
+      <button id="m-train" aria-pressed="false">Treinar</button>
+    </div>
+  </header>
+  <div class="main">
+    <div class="boardbox">
+      <div class="board" id="board" role="img" aria-label="Tabuleiro"></div>
+      <div class="ctrl">
+        <button id="first" aria-label="Início">⏮</button>
+        <button id="prev" aria-label="Lance anterior">◀</button>
+        <button id="next" class="play" aria-label="Próximo lance">▶</button>
+        <button id="last" aria-label="Posição final">⏭</button>
+      </div>
+      <div class="ctrl" id="tctrl" hidden>
+        <button id="t-hint">Dica</button>
+        <button id="t-restart">Recomeçar</button>
+        <button id="t-rand" class="play">Aleatória</button>
+      </div>
+      <div class="score" id="score" hidden><span>Acertos <b class="s-ok" id="s-ok">0</b></span><span>Erros <b class="s-err" id="s-err">0</b></span><span id="s-pct"></span></div>
+      <div class="note" id="note" aria-live="polite"></div>
+    </div>
+    <div class="panel">
+      <div class="card">
+        <p class="eyebrow" id="vtag"></p>
+        <h2 class="vname" id="vname"></h2>
+        <div class="moves" id="moves"></div>
+        <p class="plan" id="plan"></p>
+        <span class="warn" id="warn" hidden></span>
+      </div>
+      <div class="card" id="picker"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const BASE_U="e2e4 e7e5 g1f3 b8c6 f1c4".split(" ");
+const BASE_S="e4 e5 Cf3 Cc6 Bc4".split(" ");
+const BASE_N={0:"Ocupa o centro e abre caminho para o bispo e a dama.",2:"Desenvolve atacando o peão de e5.",4:"O bispo mira f7, a casa mais fraca das pretas (só o rei a defende)."};
+const G=[
+ {t:"3...Bc5 · Giuoco Piano",v:[
+  {n:"Pianíssimo",u:"f8c5 c2c3 g8f6 d2d3 d7d6 e1g1 e8g8 f1e1 a7a6 c4b3",s:"Bc5 c3 Cf6 d3 d6 O-O O-O Te1 a6 Bb3",
+   notes:{6:"c3 prepara d4 e abre a casa c2 para o bispo recuar.",8:"d3 protege e4 com calma: jogo de manobra.",14:"Bb3 tira o bispo do alcance de ...b5 e ...Ca5."},
+   plan:"Jogo lento de manobra. Cavalo em Cbd2–f1–g3, h3 para controlar g4, depois a ruptura d4 ou ataque no roque com Cf5."},
+  {n:"Pretas com a dama",u:"f8c5 c2c3 d8e7 d2d4 c5b6 e1g1 d7d6 h2h3 g8f6 f1e1",s:"Bc5 c3 De7 d4 Bb6 O-O d6 h3 Cf6 Te1",
+   notes:{7:"De7 sustenta e5 e evita perder o centro.",8:"d4 constrói o centro ideal e4+d4.",12:"h3 impede ...Bg4 cravando o cavalo."},
+   plan:"Centro e4+d4 sólido. Plano: a4–a5 para incomodar o Bb6 e ganhar espaço na ala da dama."},
+  {n:"Recuo preventivo",u:"f8c5 c2c3 c5b6 d2d4 d8e7 e1g1 d7d6 a2a4",s:"Bc5 c3 Bb6 d4 De7 O-O d6 a4",
+   notes:{12:"a4 ameaça a5 prendendo o bispo."},
+   plan:"Mesmo centro ideal com pressão na ala da dama. Se ...a6, continue com a5 e d5 ganhando espaço."}]},
+ {t:"3...Cf6 · Dois Cavalos",v:[
+  {n:"Linha principal",u:"g8f6 f3g5 d7d5 e4d5 c6a5 c4b5 c7c6 d5c6 b7c6 b5e2 h7h6 g5f3 e5e4 f3e5",s:"Cf6 Cg5 d5 exd5 Ca5 Bb5+ c6 dxc6 bxc6 Be2 h6 Cf3 e4 Ce5",
+   notes:{6:"Cg5 ataca f7 junto com o bispo.",7:"d5 fecha a diagonal do bispo.",9:"Ca5 é o certo: ataca o bispo.",18:"Ce5 centraliza o cavalo com força."},
+   plan:"Você tem um peão a mais; as pretas têm atividade de compensação. Consolide com d4, O-O e troque peças para chegar a um final melhor."},
+  {n:"Erro comum: 5...Cxd5",u:"g8f6 f3g5 d7d5 e4d5 f6d5 d2d4",s:"Cf6 Cg5 d5 exd5 Cxd5? d4!",
+   notes:{9:"Cxd5? deixa f7 sem defesa suficiente.",10:"d4! abre o centro com o rei preto ainda lá."},
+   plan:"Ataque direto ao rei. A alternativa agressiva é 6.Cxf7 (Fígado Frito): Rxf7 7.Df3+ e o rei preto fica exposto."},
+  {n:"Traxler",u:"g8f6 f3g5 f8c5 c4f7 e8e7 f7d5",s:"Cf6 Cg5 Bc5 Bxf7+ Re7 Bd5",
+   notes:{7:"Bc5 ignora a ameaça e prepara Bxf2+.",8:"Bxf7+ é a opção segura; evite 5.Cxf7 que gera caos.",10:"Bd5 recentraliza o bispo."},
+   plan:"Peão a mais e o rei preto preso no centro. Siga com d3, c3 e roque, sem pressa."}]},
+ {t:"Respostas menos comuns",v:[
+  {n:"Defesa Húngara",u:"f8e7 d2d4 d7d6 d4d5 c6b8 c4d3 g8f6 c2c4",s:"Be7 d4 d6 d5 Cb8 Bd3 Cf6 c4",
+   notes:{5:"Be7 é passivo: as pretas jogam para se defender.",8:"d5 ganha espaço e empurra o cavalo."},
+   plan:"Muito espaço para você. Continue com Cc3, h3 e O-O e expanda na ala da dama."},
+  {n:"Semi-Italiana",u:"d7d6 c2c3 g8f6 d2d4",s:"d6 c3 Cf6 d4",
+   notes:{5:"d6 é sólido, mas cede o centro."},
+   plan:"Centro ideal sem resistência. Desenvolva com O-O, Cbd2 e Te1."},
+  {n:"Armadilha Blackburne",u:"c6d4 f3d4 e5d4 e1g1",s:"Cd4 Cxd4! exd4 O-O",
+   notes:{5:"Cd4 é uma isca: deixa e5 sem defesa.",6:"Cxd4! é o correto. Nunca 4.Cxe5? Dg5! ataca o cavalo e g2."},
+   plan:"Vantagem de desenvolvimento. Siga com c3 abrindo o centro.",warn:"Nunca 4.Cxe5? Dg5! ganha material"},
+  {n:"Rousseau",u:"f7f5 d2d3 g8f6 b1c3",s:"f5 d3 Cf6 Cc3",
+   notes:{5:"f5 enfraquece a diagonal a2–g8 do rei preto."},
+   plan:"Roque e exploração da diagonal do bispo, com Cg5 quando possível."}]}
+];
+const V=[];G.forEach((g,gi)=>g.v.forEach(v=>{v.g=gi;v.U=BASE_U.concat(v.u.split(" "));v.S=BASE_S.concat(v.s.split(" "));V.push(v)}));
+
+const START="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+const GL={k:"♚",q:"♛",r:"♜",b:"♝",n:"♞",p:"♟"};
+function initPos(){const p={};START.split("/").forEach((row,ri)=>{let f=0;for(const c of row){if(/\d/.test(c))f+=+c;else{p["abcdefgh"[f]+(8-ri)]=c;f++}}});return p}
+function apply(p,m){const a=m.slice(0,2),b=m.slice(2,4),pc=p[a];delete p[a];p[b]=pc;
+  if(pc==="K"&&a==="e1"&&b==="g1"){p.f1=p.h1;delete p.h1}
+  if(pc==="k"&&a==="e8"&&b==="g8"){p.f8=p.h8;delete p.h8}}
+function posAt(v,n){const p=initPos();for(let i=0;i<n;i++)apply(p,v.U[i]);return p}
+
+let cur=V[0],ply=0,mode="study",sel=null,hintSq=null,badSq=null,hints=0,stats={ok:0,err:0},busy=false;
+const $=id=>document.getElementById(id);
+const F="abcdefgh";
+function drawBoard(){const p=posAt(cur,ply),last=ply?cur.U[ply-1]:null,hl=last?[last.slice(0,2),last.slice(2,4)]:[];let h="";
+  for(let r=8;r>=1;r--)for(let f=0;f<8;f++){const sq=F[f]+r,dark=(f+r)%2===0,pc=p[sq];
+    const cls=["sq",dark?"d":"l"];if(hl.includes(sq)&&sq!==badSq)cls.push("hl");if(sq===sel)cls.push("sel");if(sq===hintSq)cls.push("hint");if(sq===badSq)cls.push("bad");
+    h+=`<div class="${cls.join(" ")}" data-sq="${sq}">`+(f===0?`<span class="co r">${r}</span>`:"")+(r===1?`<span class="co f">${F[f]}</span>`:"")+
+    (pc?`<span class="pc ${pc===pc.toUpperCase()?"pw":"pb"}">${GL[pc.toLowerCase()]}︎</span>`:"")+"</div>"}
+  $("board").innerHTML=h}
+function drawMoves(){let h="";const n=mode==="train"?ply:cur.S.length;
+  for(let i=0;i<n;i++){const s=cur.S[i];if(i%2===0)h+=`<span class="num">${i/2+1}.</span>`;
+    h+=`<button class="mv${i<5?" tr":""}${i===ply-1?" cur":""}" data-i="${i+1}">${s}</button>`}
+  if(mode==="train"&&ply<cur.S.length)h+=`<span class="num">${ply%2===0?(ply/2+1)+".":""} ?</span>`;
+  $("moves").innerHTML=h}
+function noteFor(i){return (cur.notes&&cur.notes[i])||BASE_N[i]||""}
+function label(i){return `${Math.ceil((i+1)/2)}${i%2===0?". ":"... "}${cur.S[i]}`}
+function setNote(html,tone){const n=$("note");n.innerHTML=html;n.classList.toggle("good",tone==="good");n.classList.toggle("wrong",tone==="wrong")}
+function studyNote(){if(ply===0)return setNote("Posição inicial. Toque em ▶ para começar.");
+  setNote(`<b>${label(ply-1)}</b> ${noteFor(ply-1)||(ply===cur.S.length?"Fim da linha. Veja o plano ao lado.":"")}`)}
+function drawScore(){$("s-ok").textContent=stats.ok;$("s-err").textContent=stats.err;const t=stats.ok+stats.err;
+  $("s-pct").textContent=t?Math.round(stats.ok/t*100)+"% de precisão":""}
+function render(){drawBoard();drawMoves();drawScore();
+  $("vtag").textContent=G[cur.g].t;$("vname").textContent=cur.n;
+  const done=ply===cur.S.length;$("plan").textContent=mode==="train"&&!done?"O plano aparece quando você completar a linha.":cur.plan;
+  const w=$("warn");if(cur.warn&&(mode==="study"||done)){w.textContent=cur.warn;w.hidden=false}else w.hidden=true;
+  document.querySelectorAll(".vbtn").forEach(b=>b.setAttribute("aria-pressed",V[+b.dataset.v]===cur?"true":"false"))}
+function go(n){ply=Math.max(0,Math.min(cur.S.length,n));render();studyNote()}
+
+function startTrain(){ply=0;sel=hintSq=badSq=null;hints=0;busy=false;stats={ok:0,err:0};render();
+  setNote("Você joga de brancas. Toque na peça e depois na casa de destino.")}
+function blackReply(){if(ply>=cur.S.length||ply%2===0)return;busy=true;
+  setTimeout(()=>{ply++;busy=false;render();
+    const n=noteFor(ply-1);setNote(`Pretas: <b>${label(ply-1)}</b> ${n}${ply===cur.S.length?"":" Sua vez."}`);
+    if(ply===cur.S.length)finish()},550)}
+function finish(){const t=stats.ok+stats.err,pct=t?Math.round(stats.ok/t*100):100;
+  setNote(`Linha completa: ${stats.ok} acertos e ${stats.err} erros (${pct}%). ${pct===100?"Perfeito!":"Repita até zerar os erros."}`,pct===100?"good":"");render()}
+function norm(m){if(m==="e1h1")return "e1g1";return m}
+function tryMove(m){const exp=cur.U[ply];
+  if(norm(m)===exp){stats.ok++;ply++;sel=hintSq=badSq=null;hints=0;render();
+    setNote(`Certo! <b>${label(ply-1)}</b> ${noteFor(ply-1)}`,"good");
+    if(ply===cur.S.length)finish();else blackReply()}
+  else{stats.err++;badSq=m.slice(2,4);sel=null;render();setNote("Não é esse lance. Tente de novo ou peça uma dica.","wrong");
+    const b=$("board");b.classList.remove("shake");void b.offsetWidth;b.classList.add("shake");
+    setTimeout(()=>{badSq=null;drawBoard()},600)}}
+$("board").addEventListener("click",e=>{if(mode!=="train"||busy||ply>=cur.S.length||ply%2)return;
+  const d=e.target.closest(".sq");if(!d)return;const sq=d.dataset.sq,pc=posAt(cur,ply)[sq];
+  const own=pc&&pc===pc.toUpperCase();
+  if(!sel){if(own){sel=sq;drawBoard()}return}
+  if(sq===sel){sel=null;drawBoard();return}
+  if(own&&!(sel==="e1"&&sq==="h1")){sel=sq;drawBoard();return}
+  tryMove(sel+sq)});
+$("t-hint").onclick=()=>{if(mode!=="train"||busy||ply>=cur.S.length)return;hints++;const exp=cur.U[ply];
+  if(hints===1){hintSq=exp.slice(0,2);drawBoard();setNote("Dica: mova a peça marcada.")}
+  else{setNote(`Resposta: <b>${label(ply)}</b>. Faça o lance no tabuleiro.`);hintSq=exp.slice(2,4);sel=exp.slice(0,2);drawBoard()}};
+$("t-restart").onclick=startTrain;
+$("t-rand").onclick=()=>{let n;do n=V[Math.floor(Math.random()*V.length)];while(n===cur&&V.length>1);cur=n;save();startTrain()};
+function setMode(m){mode=m;$("m-study").setAttribute("aria-pressed",m==="study");$("m-train").setAttribute("aria-pressed",m==="train");
+  document.querySelector(".ctrl").hidden=m==="train";$("tctrl").hidden=m!=="train";$("score").hidden=m!=="train";
+  $("board").classList.toggle("training",m==="train");sel=hintSq=badSq=null;
+  if(m==="train")startTrain();else go(5)}
+$("m-study").onclick=()=>setMode("study");$("m-train").onclick=()=>setMode("train");
+function save(){try{localStorage.setItem("ital-v",V.indexOf(cur))}catch(_){}}
+
+let pk="";G.forEach((g,gi)=>{pk+=`<div class="group"><p class="gtitle">${g.t}</p><div class="vlist">`;
+  g.v.forEach(v=>{const i=V.indexOf(v);pk+=`<button class="vbtn" data-v="${i}"><small>${i+1} · 3...${v.s.split(" ")[0]}</small>${v.n}</button>`});pk+="</div></div>"});
+$("picker").innerHTML=`<p class="eyebrow">10 variantes</p>`+pk;
+$("picker").addEventListener("click",e=>{const b=e.target.closest(".vbtn");if(!b)return;cur=V[+b.dataset.v];save();
+  if(mode==="train")startTrain();else go(5)});
+$("moves").addEventListener("click",e=>{if(mode==="train")return;const b=e.target.closest(".mv");if(b)go(+b.dataset.i)});
+$("first").onclick=()=>go(0);$("prev").onclick=()=>go(ply-1);$("next").onclick=()=>go(ply+1);$("last").onclick=()=>go(cur.S.length);
+document.addEventListener("keydown",e=>{if(mode!=="study")return;if(e.key==="ArrowRight")go(ply+1);if(e.key==="ArrowLeft")go(ply-1)});
+try{const s=localStorage.getItem("ital-v");if(s&&V[+s])cur=V[+s]}catch(_){}
+go(5);
+</script>
+
+</body>
+</html>
